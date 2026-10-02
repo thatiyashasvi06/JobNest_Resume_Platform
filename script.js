@@ -165,6 +165,7 @@ class ResumeBuilderApp {
         this.bindAnalyzerEvents();
         this.bindResumeActions();
         this.bindAuthEvents();
+        this.bindGlobalAuthInterceptor();
         this.updateAuthUI();
         
         // Pre-analyze default JD on initial load if no analysis exists
@@ -183,6 +184,43 @@ class ResumeBuilderApp {
     // ----------------------------------------------------------------------
     // AUTHENTICATION (FRONTEND DEMO)
     // ----------------------------------------------------------------------
+    isLoggedIn() {
+        return !!this.authUser && localStorage.getItem(STORAGE_KEYS.AUTH_SESSION) === 'active';
+    }
+
+    bindGlobalAuthInterceptor() {
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('button, .btn, a.btn, [data-page], .fab-menu-item, .fab-toggle-btn');
+            if (!btn) return;
+
+            // Allow auth page buttons, modals, theme, mobile nav toggles
+            if (btn.closest('#page-sign-in, #page-sign-up, #modal-forgot-password, .auth-card') ||
+                btn.id === 'btn-sign-in' || btn.id === 'btn-sign-up' || btn.id === 'btn-sign-out' ||
+                btn.id === 'mobile-nav-toggle' || btn.classList.contains('password-toggle') ||
+                btn.classList.contains('theme-toggle') || btn.classList.contains('modal-close')) {
+                return;
+            }
+
+            if (!this.isLoggedIn()) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const targetPage = btn.getAttribute('data-page');
+                if (targetPage && targetPage !== 'sign-in' && targetPage !== 'sign-up') {
+                    this.pendingTargetPage = targetPage;
+                }
+
+                const emailInput = document.getElementById('signin-email');
+                const passInput = document.getElementById('signin-password');
+                if (emailInput && !emailInput.value) emailInput.value = 'demo@resumai.com';
+                if (passInput && !passInput.value) passInput.value = 'Demo@123';
+
+                this.showToast('Please sign in to continue!', 'info');
+                this.navigateTo('sign-in');
+            }
+        }, true);
+    }
+
     loadAuthUser() {
         try {
             return JSON.parse(localStorage.getItem(STORAGE_KEYS.AUTH_USER) || 'null');
